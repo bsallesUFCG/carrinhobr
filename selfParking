@@ -1,0 +1,174 @@
+#include "Servo.h"
+#include "SR04.h" //ultrasonic
+
+#define Bin1Pin 4
+#define Bin2Pin 2
+#define PwmbPin 6
+#define StandbyPin 7
+#define ServoPin 5
+#define TRIG_FRONT 22 //ultrasonic front
+#define ECHO_FRONT 24
+#define TRIG_REAR 26 //ultrasonic rear
+#define ECHO_REAR 28
+int buzzer_pin = 9;
+
+SR04 srFront = SR04(ECHO_FRONT,TRIG_FRONT);
+SR04 srRear = SR04(ECHO_REAR,TRIG_REAR);
+
+Servo myservo;
+int ServoBaseDegree = 80;
+int a=1;
+
+//functions
+void Drive(int degree);
+void Turn (int degree);
+void Park(void);
+void Test(void);
+void setup() {
+  Serial.begin(9600);
+
+  //keep TB6612 BIN stop
+  pinMode(Bin1Pin, OUTPUT);
+  digitalWrite(Bin1Pin, LOW);
+  pinMode(Bin2Pin, OUTPUT);
+  digitalWrite(Bin2Pin, LOW);
+  pinMode(PwmbPin, OUTPUT);
+  digitalWrite(PwmbPin, HIGH);
+
+  //keep TB6612 Standby
+  pinMode(StandbyPin, OUTPUT);
+  digitalWrite(StandbyPin, LOW);
+
+  myservo.attach(ServoPin);
+  pinMode(buzzer_pin,OUTPUT);
+}
+
+void loop() {
+  // go forward = 270 and go back = 90 and stop = 400
+/*  
+  // turn = 30 turns right (45 degrees) and turns = 150 turns left (45 degrees)
+
+  //parking example
+  Turn(66); // straight
+  delay(500);
+  Drive(400,0); //stop
+  delay(2000);
+  Drive(270,10); // forward
+  delay(2000);
+  Drive(400,0); //stop
+  delay(500);
+  Turn(150); //turn left
+  delay(500);
+  Drive(90,20); //backwards
+  delay(2500);
+  Drive(400,0); //stop
+  delay(1000);
+  Turn(30); //turn right
+  delay(1000);
+  Drive(90,20); //backwards
+  delay(1200);
+  Drive(400,0); //stop
+  delay(1000);
+  Turn(66);
+  delay(500);
+  Drive(270,10); // forward
+  delay(500);*/
+/*
+  how to use ultrasonic 
+    a=srFront.Distance();
+    Serial.print("front:");
+   Serial.println(a);
+    b=srRear.Distance();
+    Serial.print("rear:");
+   Serial.println(b);
+
+   delay(500);
+*/
+//Park();
+    digitalWrite(buzzer,HIGH);
+    delay(1);//wait for 1ms
+    digitalWrite(buzzer,LOW);
+    delay(1);//wait for 1ms
+}
+
+void Drive(int degree, int car_speed)
+{
+  int Speed = car_speed; //Speed starts at 10 ~ 100
+  int value = (Speed / 10) * 25; //app contol hbot_speed is 0 ~ 100 ,pwm is 0~255
+    if (degree >= 0 && degree <= 180) {
+      digitalWrite(Bin1Pin, HIGH);
+      digitalWrite(Bin2Pin, LOW);
+      digitalWrite(StandbyPin, HIGH);
+    } else if (degree > 180 && degree <= 360) {
+      digitalWrite(Bin1Pin, LOW);
+      digitalWrite(Bin2Pin, HIGH);
+      digitalWrite(StandbyPin, HIGH);
+    } else if (degree == 400) {
+      value = 0;
+    }
+
+  analogWrite(PwmbPin, value);
+}
+
+
+void Turn (int degree)
+{
+  int servo_degree;
+    if (degree == 90 || degree == 270) {
+      servo_degree = ServoBaseDegree;
+    } else if (degree >= 0 && degree <= 180) {
+      servo_degree = ServoBaseDegree + 90 - degree;   // 180-degree-diff
+    } else if (degree > 180 && degree <= 360) {
+      servo_degree = degree - 270 + ServoBaseDegree;  // degree-180-diff
+    }
+    if (servo_degree > 140) {
+      servo_degree = 140;
+    } else if (servo_degree < 0) {
+      servo_degree = 0;
+    }
+  myservo.write(servo_degree);
+}
+
+
+
+void Park(void){
+
+  Turn(66); // straight
+  delay(500);
+  Drive(400,0); //stop
+  delay(2000);
+  Drive(270,10); // forward
+  delay(2000);
+  Drive(400,0); //stop
+  delay(500);
+
+  //ACHOU A VAGA
+
+  Turn(150); //turn left
+  delay(500);
+  while(srRear.Distance()>10){
+  Drive(90,20); //backwards
+  }
+  
+  Drive(400,0); //stop
+  delay(1000);
+  Turn(30); //turn right
+  delay(1000);
+  
+  while(srRear.Distance()>7){
+  Drive(90,20); //backwards
+  }
+  
+  delay(1200);
+  Drive(400,0); //stop
+  delay(1000);
+  Turn(66);
+  delay(500);
+  
+  while(srFront.Distance()>6){
+  Drive(270,15); // forward
+  }
+
+  Drive(400,0); //stop
+  while(true);
+}
